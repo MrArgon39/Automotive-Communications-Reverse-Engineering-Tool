@@ -9,13 +9,14 @@ LiquidCrystal lcd(7, 8, 9, 10, 11, 12);
 #define enter A5
 #define left A4
 #define right A3
-#define select A2
+#define send A2
 boolean L1Val = 0;
-boolean wait = 0;
-byte mode = 2;
-int encoderOutput = 0;
-int cursorPos = 0;
-short halt = 333; // Time delay on the encoder
+boolean wait = 0;      // Functioally an encoder enable
+byte mode = 2;         // Which comms mode is selected, 0 = CANBUS, 1 = GMLAN, 2 = MPX
+int encoderOutput = 0; // Current value of the encoder, is reset to 0 frequently
+int cursorPos = 0;     // Which message fram is being selected
+boolean enable = 0;    // Internal while enable flag
+short halt = 333;      // Time delay on the encoder
 
 void isr1()
 {
@@ -50,7 +51,7 @@ void setup()
   pinMode(enter, INPUT);
   pinMode(left, INPUT);
   pinMode(right, INPUT);
-  pinMode(select, INPUT);
+  pinMode(send, INPUT);
   attachInterrupt(1, isr1, RISING);
   lcd.clear();
   Serial.begin(115200);
@@ -89,22 +90,22 @@ void loop()
       bean.ackMsg((const uint8_t[]){0xFE});     // Messages to acknowledge
       bean.begin();
       Serial.println("BeanMPX");
-      halt = 125;
-      lcd.setCursor(3, 1);
-      lcd.cursor();
+      // halt = 125;
+      lcd.setCursor(0, 1);
+      lcd.blink();
       while (true)
       {
         lcd.setCursor(0, 1);
+        lcd.print("Curr:");
         lcd.print(mpx[0], HEX);
-        lcd.print("                  ");
-        lcd.setCursor(3, 1);
+        lcd.print("            ");
+        lcd.setCursor(8, 1);
         lcd.print(mpx[1], HEX);
-        lcd.setCursor(6, 1);
+        lcd.setCursor(11, 1);
         lcd.print(mpx[2], HEX);
-        lcd.setCursor(9, 1);
+        lcd.setCursor(14, 1);
         lcd.print(mpx[3], HEX);
-        lcd.setCursor(12, 1);
-        lcd.print(encoderOutput, HEX);
+        // lcd.print(encoderOutput, HEX);
         // Serial.println(encoderOutput);
         if (digitalRead(right) == HIGH)
         {
@@ -131,25 +132,97 @@ void loop()
         switch (cursorPos)
         {
         case 0:
-          lcd.setCursor(3, 1);
+          lcd.setCursor(8, 1);
           break;
 
         case 1:
-          lcd.setCursor(6, 1);
+          lcd.setCursor(11, 1);
           break;
 
         case 2:
-         lcd.setCursor(9, 1);
+          lcd.setCursor(14, 1);
           break;
         }
-
-        if (digitalRead(enter) == HIGH)
+        if (digitalRead(enter) == HIGH && cursorPos == 0)
+        {
+          lcd.noBlink();
+          lcd.cursor();
+          encoderOutput = 0;
+          enable = 1;
+          while (enable == 1)
+          {
+            bound(0, 255);
+            mpx[1] = encoderOutput;
+            wait = 0;
+            lcd.setCursor(8, 1);
+            lcd.print(mpx[1], HEX);
+            if (digitalRead(left) == HIGH)
+            {
+              enable = 0;
+            }
+          }
+          lcd.noCursor();
+          lcd.blink();
+        }
+        if (digitalRead(enter) == HIGH && cursorPos == 1)
+        {
+          lcd.noBlink();
+          lcd.cursor();
+          encoderOutput = 0;
+          enable = 1;
+          while (enable == 1)
+          {
+            bound(0, 255);
+            mpx[2] = encoderOutput;
+            wait = 0;
+            lcd.setCursor(11, 1);
+            lcd.print(mpx[2], HEX);
+            if (digitalRead(left) == HIGH)
+            {
+              enable = 0;
+            }
+          }
+          lcd.noCursor();
+          lcd.blink();
+        }
+        if (digitalRead(enter) == HIGH && cursorPos == 2)
+        {
+          lcd.noBlink();
+          lcd.cursor();
+          encoderOutput = 0;
+          enable = 1;
+          while (enable == 1)
+          {
+            bound(0, 255);
+            mpx[3] = encoderOutput;
+            wait = 0;
+            lcd.setCursor(14, 1);
+            lcd.print(mpx[3], HEX);
+            if (digitalRead(left) == HIGH)
+            {
+              enable = 0;
+            }
+          }
+          lcd.noCursor();
+          lcd.blink();
+        }
+        if (digitalRead(send) == HIGH)
         {
           if (!bean.isBusy())
           {
             bean.sendMsg(mpx, sizeof(mpx));
-            //Serial.println("MPXSend");
+            // Serial.println("MPXSend");
           }
+          lcd.setCursor(0, 3);
+          lcd.print("Last:");
+          lcd.print(mpx[0], HEX);
+          lcd.print("            ");
+          lcd.setCursor(8, 3);
+          lcd.print(mpx[1], HEX);
+          lcd.setCursor(11, 3);
+          lcd.print(mpx[2], HEX);
+          lcd.setCursor(14, 3);
+          lcd.print(mpx[3], HEX);
           Serial.println("MPXSend");
         }
         wait = 0;
@@ -172,3 +245,21 @@ void bound(int Min, int Max)
     encoderOutput = Max;
   }
 }
+
+
+/* Code Graveyard
+        //Original LCD code for the selectable line
+        lcd.setCursor(0, 1);
+        lcd.print(mpx[0], HEX);
+        lcd.print("                  ");
+        lcd.setCursor(3, 1);
+        lcd.print(mpx[1], HEX);
+        lcd.setCursor(6, 1);
+        lcd.print(mpx[2], HEX);
+        lcd.setCursor(9, 1);
+        lcd.print(mpx[3], HEX);
+        lcd.setCursor(12, 1);
+        lcd.setCursor(0, 1);
+
+
+*/
