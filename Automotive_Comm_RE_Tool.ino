@@ -2,7 +2,7 @@
 #include <BeanMPX.h>
 #include <Wire.h>
 #include <LiquidCrystal.h>
-LiquidCrystal lcd(7, 8, 9, 10, 11, 12);
+LiquidCrystal lcd(5, 6, 7, 10, 11, 12);
 #define L1 2
 #define L2 3
 #define L3 4
@@ -87,18 +87,18 @@ void loop()
       encoderOutput = 0;
       BeanMPX bean;
       uint8_t mpx[] = {0x62, 0x01, 0x00, 0x00}; // MPX frame to send
-      bean.ackMsg((const uint8_t[]){0xFE});     // Messages to acknowledge
-      bean.begin();
+      bean.ackMsg((const uint8_t[]){0xFE}, 1);     // Messages to acknowledge
+      bean.begin(15,14);
       Serial.println("BeanMPX");
       // halt = 125;
       lcd.blink();
-        lcd.setCursor(3, 1);
-        lcd.print("Manual");
-        lcd.setCursor(13,1);
-        lcd.print("Auto");
+      lcd.setCursor(3, 1);
+      lcd.print("Manual");
+      lcd.setCursor(13, 1);
+      lcd.print("Auto");
       while (true)
       {
-        if (digitalRead(left)==HIGH)
+        if (digitalRead(left) == HIGH)
         {
           while (true)
           {
@@ -154,7 +154,7 @@ void loop()
             {
               lcd.noBlink();
               lcd.cursor();
-              encoderOutput = 0;
+              encoderOutput = mpx[1];
               enable = 1;
               while (enable == 1)
               {
@@ -175,7 +175,7 @@ void loop()
             {
               lcd.noBlink();
               lcd.cursor();
-              encoderOutput = 0;
+              encoderOutput = mpx[2];
               enable = 1;
               while (enable == 1)
               {
@@ -196,7 +196,7 @@ void loop()
             {
               lcd.noBlink();
               lcd.cursor();
-              encoderOutput = 0;
+              encoderOutput = mpx[3];
               enable = 1;
               while (enable == 1)
               {
@@ -218,27 +218,30 @@ void loop()
               if (!bean.isBusy())
               {
                 bean.sendMsg(mpx, sizeof(mpx));
-                // Serial.println("MPXSend");
+                 Serial.println("MPXSend");
+                delay(50);
+                lcd.setCursor(0, 2);
+                lcd.print("Last:");
+                lcd.print(mpx[0], HEX);
+                lcd.print("            ");
+                lcd.setCursor(8, 2);
+                lcd.print(mpx[1], HEX);
+                lcd.setCursor(11, 2);
+                lcd.print(mpx[2], HEX);
+                lcd.setCursor(14, 2);
+                lcd.print(mpx[3], HEX);
               }
-              lcd.setCursor(0, 3);
-              lcd.print("Last:");
-              lcd.print(mpx[0], HEX);
-              lcd.print("            ");
-              lcd.setCursor(8, 3);
-              lcd.print(mpx[1], HEX);
-              lcd.setCursor(11, 3);
-              lcd.print(mpx[2], HEX);
-              lcd.setCursor(14, 3);
-              lcd.print(mpx[3], HEX);
-              Serial.println("MPXSend");
+
+              // Serial.println("SendTest");
             }
             wait = 0;
             // lcd.noCursor();
             delay(halt);
           }
         }
-        else if (digitalRead(right)==HIGH){
-          //Do something
+        else if (digitalRead(right) == HIGH)
+        {
+          // Do something
         }
       }
     }
