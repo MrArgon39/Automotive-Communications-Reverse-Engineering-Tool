@@ -87,18 +87,16 @@ void loop()
       encoderOutput = 0;
       BeanMPX bean;
       uint8_t mpx[] = {0x62, 0x01, 0x00, 0x00}; // MPX frame to send
-      bean.ackMsg((const uint8_t[]){0xFE}, 1);     // Messages to acknowledge
-      bean.begin(15,14);
+      bean.ackMsg((const uint8_t[]){0xFE}, 1);  // Messages to acknowledge
+      bean.begin(15, 14);
       Serial.println("BeanMPX");
       // halt = 125;
       lcd.blink();
-      lcd.setCursor(3, 1);
-      lcd.print("Manual");
-      lcd.setCursor(13, 1);
-      lcd.print("Auto");
+      lcd.setCursor(0, 3);
+      lcd.print("   Manual  Auto");
       while (true)
       {
-        if (digitalRead(left) == HIGH)
+        if (digitalRead(left) == HIGH) // Manual mode selected
         {
           while (true)
           {
@@ -112,6 +110,8 @@ void loop()
             lcd.print(mpx[2], HEX);
             lcd.setCursor(14, 1);
             lcd.print(mpx[3], HEX);
+            lcd.setCursor(0,3);
+            lcd.print("SEL  LEFT  RGHT SEND");
             // lcd.print(encoderOutput, HEX);
             // Serial.println(encoderOutput);
             if (digitalRead(right) == HIGH)
@@ -156,6 +156,8 @@ void loop()
               lcd.cursor();
               encoderOutput = mpx[1];
               enable = 1;
+              lcd.setCursor(0,3);
+              lcd.print("RTRN                ");
               while (enable == 1)
               {
                 bound(0, 255);
@@ -177,6 +179,8 @@ void loop()
               lcd.cursor();
               encoderOutput = mpx[2];
               enable = 1;
+              lcd.setCursor(0,3);
+              lcd.print("RTRN                ");
               while (enable == 1)
               {
                 bound(0, 255);
@@ -196,6 +200,8 @@ void loop()
             {
               lcd.noBlink();
               lcd.cursor();
+              lcd.setCursor(0,3);
+              lcd.print("RTRN                ");
               encoderOutput = mpx[3];
               enable = 1;
               while (enable == 1)
@@ -218,7 +224,7 @@ void loop()
               if (!bean.isBusy())
               {
                 bean.sendMsg(mpx, sizeof(mpx));
-                 Serial.println("MPXSend");
+                Serial.println("MPXSend");
                 delay(50);
                 lcd.setCursor(0, 2);
                 lcd.print("Last:");
@@ -239,14 +245,80 @@ void loop()
             delay(halt);
           }
         }
-        else if (digitalRead(right) == HIGH)
+        else if (digitalRead(right) == HIGH) // Automatic Mode Selected
         {
-          // Do something
+          lcd.setCursor(0, 1);
+          lcd.print("Select Start     ");
+          encoderOutput = mpx[1];
+          lcd.noBlink();
+          lcd.cursor();
+          lcd.setCursor(0, 3);
+          lcd.print("CNFM           ");
+          while (true)
+          {
+            lcd.setCursor(13, 1);
+            lcd.print(mpx[1], HEX);
+            mpx[1] = encoderOutput;
+            bound(0, 255);
+            wait = 0;
+            if (digitalRead(enter) == HIGH)
+            {
+              mpx[2] = 0xFE;
+              mpx[3] = 0xFE;
+              lcd.setCursor(0, 1);
+              lcd.print("               ");
+              while (true)
+              {
+                lcd.setCursor(0, 1);
+                lcd.print("Curr:");
+                lcd.print(mpx[0], HEX);
+                lcd.setCursor(8, 1);
+                lcd.print(mpx[1], HEX);
+                lcd.setCursor(11, 1);
+                lcd.print(mpx[2], HEX);
+                lcd.setCursor(14, 1);
+                lcd.print(mpx[3], HEX);
+                bean.sendMsg(mpx, sizeof(mpx));
+                Serial.println("MPXAutoSend");
+                enable = 1;
+                lcd.setCursor(0, 2);
+                lcd.print("Did something happen");
+                lcd.setCursor(0, 3);
+                lcd.print("RSET  Yes  No   RSND");
+                while (enable == 1)
+                {
+                  if (digitalRead(left) == HIGH)
+                  {
+                    // bit set and shift
+                  }
+                  else if (digitalRead(right) == HIGH)
+                  {
+                    mpx[1]++;
+                    enable = 0;
+                    // Serial.println("DOOR STUCK");
+                    delay(halt);
+                  }
+                  else if (digitalRead(send) == HIGH)
+                  {
+                    bean.sendMsg(mpx, sizeof(mpx));
+                  }
+                  else if (digitalRead(enter) == HIGH)
+                  {
+                    uint8_t MPXT[] = {0x62, 0x01, 0x00, 0x00};
+                    MPXT[1] = mpx[1];
+                    bean.sendMsg(MPXT, sizeof(MPXT));
+                  }
+                }
+              }
+            }
+          }
         }
       }
     }
   }
   wait = 0;
+  lcd.setCursor(0, 3);
+  lcd.print("CNFM");
   delay(halt);
 }
 void bound(int Min, int Max)
@@ -274,6 +346,11 @@ void bound(int Min, int Max)
         lcd.print(mpx[3], HEX);
         lcd.setCursor(12, 1);
         lcd.setCursor(0, 1);
-
-
+        //Structure for the buttom menu at the bottom of the LCD
+        (CMD1 CMD2  CMD3 CMD4)
+        //Original Manual/Auto toggle
+              lcd.setCursor(3, 1);
+      lcd.print("Manual");
+      lcd.setCursor(13, 1);
+      lcd.print("Auto");
 */
