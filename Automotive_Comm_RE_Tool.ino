@@ -16,7 +16,11 @@ byte mode = 2;         // Which comms mode is selected, 0 = CANBUS, 1 = GMLAN, 2
 int encoderOutput = 0; // Current value of the encoder, is reset to 0 frequently
 int cursorPos = 1;     // Which message fram is being selected
 boolean enable = 0;    // Internal while enable flag
-short halt = 333;      // Time delay on the encoder
+boolean enable2 = 0;
+boolean enable3 = 0;
+boolean enable4 = 0;
+boolean enable5 = 0;
+short halt = 333; // Time delay on the encoder
 
 void isr1()
 {
@@ -110,7 +114,7 @@ void loop()
             lcd.print(mpx[2], HEX);
             lcd.setCursor(14, 1);
             lcd.print(mpx[3], HEX);
-            lcd.setCursor(0,3);
+            lcd.setCursor(0, 3);
             lcd.print("SEL  LEFT  RGHT SEND");
             // lcd.print(encoderOutput, HEX);
             // Serial.println(encoderOutput);
@@ -156,8 +160,8 @@ void loop()
               lcd.cursor();
               encoderOutput = mpx[1];
               enable = 1;
-              lcd.setCursor(0,3);
-              lcd.print("RTRN                ");
+              lcd.setCursor(0, 3);
+              lcd.print("     RTRN           ");
               while (enable == 1)
               {
                 bound(0, 255);
@@ -179,8 +183,8 @@ void loop()
               lcd.cursor();
               encoderOutput = mpx[2];
               enable = 1;
-              lcd.setCursor(0,3);
-              lcd.print("RTRN                ");
+              lcd.setCursor(0, 3);
+              lcd.print("     RTRN           ");
               while (enable == 1)
               {
                 bound(0, 255);
@@ -200,8 +204,8 @@ void loop()
             {
               lcd.noBlink();
               lcd.cursor();
-              lcd.setCursor(0,3);
-              lcd.print("RTRN                ");
+              lcd.setCursor(0, 3);
+              lcd.print("     RTRN           ");
               encoderOutput = mpx[3];
               enable = 1;
               while (enable == 1)
@@ -248,7 +252,7 @@ void loop()
         else if (digitalRead(right) == HIGH) // Automatic Mode Selected
         {
           lcd.setCursor(0, 1);
-          lcd.print("Select Start     ");
+          lcd.print("Select Start Addr");
           encoderOutput = mpx[1];
           lcd.noBlink();
           lcd.cursor();
@@ -256,7 +260,7 @@ void loop()
           lcd.print("CNFM           ");
           while (true)
           {
-            lcd.setCursor(13, 1);
+            lcd.setCursor(18, 1);
             lcd.print(mpx[1], HEX);
             mpx[1] = encoderOutput;
             bound(0, 255);
@@ -266,7 +270,7 @@ void loop()
               mpx[2] = 0xFE;
               mpx[3] = 0xFE;
               lcd.setCursor(0, 1);
-              lcd.print("               ");
+              lcd.print("                   ");
               while (true)
               {
                 lcd.setCursor(0, 1);
@@ -289,20 +293,60 @@ void loop()
                 {
                   if (digitalRead(left) == HIGH)
                   {
-                    // bit set and shift
+                    uint8_t MPXT[] = {0x62, 0x01, 0x00, 0x00};
+                    MPXT[1] = mpx[1];
+                    bean.sendMsg(MPXT, sizeof(MPXT));
+                    mpx[2] = 0x80;
+                    while (enable2 == 1)
+                    {
+                      lcd.setCursor(0, 1);
+                      lcd.print("Curr:");
+                      lcd.print(mpx[0], HEX);
+                      lcd.setCursor(8, 1);
+                      lcd.print(mpx[1], HEX);
+                      lcd.setCursor(11, 1);
+                      lcd.print(mpx[2], HEX);
+                      lcd.setCursor(14, 1);
+                      lcd.print(mpx[3], HEX);
+                      bean.sendMsg(mpx, sizeof(mpx));
+                      while (enable3 == 1)
+                      {
+
+                        if (digitalRead(left) == HIGH) // Ah shit, here we go again
+                        {
+                        }
+                        else if (digitalRead(right) == HIGH) // Nothing Happenned, goto next address by breaking loop
+                        {
+                          mpx[2] >>= 1;
+                          enable2 = 0;
+                          // Serial.println("SHITS STUCK");
+                          delay(halt);
+                        }
+                        else if (digitalRead(send) == HIGH) // Repeat message, incase something blinked but you missed it
+                        {
+                          bean.sendMsg(mpx, sizeof(mpx));
+                        }
+                        else if (digitalRead(enter) == HIGH) // Clear the effects of the message, mainly for those that pop-up a warning
+                        {
+                          uint8_t MPXT[] = {0x62, 0x01, 0x00, 0x00};
+                          MPXT[1] = mpx[1];
+                          bean.sendMsg(MPXT, sizeof(MPXT));
+                        }
+                      }
+                    }
                   }
-                  else if (digitalRead(right) == HIGH)
+                  else if (digitalRead(right) == HIGH) // Nothing Happenned, goto next address by breaking loop
                   {
                     mpx[1]++;
                     enable = 0;
                     // Serial.println("DOOR STUCK");
                     delay(halt);
                   }
-                  else if (digitalRead(send) == HIGH)
+                  else if (digitalRead(send) == HIGH) // Repeat message, incase something blinked but you missed it
                   {
                     bean.sendMsg(mpx, sizeof(mpx));
                   }
-                  else if (digitalRead(enter) == HIGH)
+                  else if (digitalRead(enter) == HIGH) // Clear the effects of the message, mainly for those that pop-up a warning
                   {
                     uint8_t MPXT[] = {0x62, 0x01, 0x00, 0x00};
                     MPXT[1] = mpx[1];
